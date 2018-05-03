@@ -2,6 +2,15 @@
 name = "fpool"
 version = "0.1.0"
 authors = ["Darren Tsung <darren@onesignal.com>"]
+description = "Non-leased object-pooling."
+homepage = "https://github.com/DarrenTsung/fpool"
+repository = "https://github.com/DarrenTsung/fpool"
+readme = "README.md"
+keywords = ["pool", "object-pool"]
+
+[badges.travis-ci]
+repository = "DarrenTsung/fpool"
+branch = "master"
 
 [dependencies]
 failure = "0.1"
