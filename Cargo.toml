@@ -1,0 +1,7 @@
+[package]
+name = "fpool"
+version = "0.1.0"
+authors = ["Darren Tsung <darren@onesignal.com>"]
+
+[dependencies]
+failure = "0.1"
