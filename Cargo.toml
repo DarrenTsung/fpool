@@ -1,6 +1,7 @@
 [package]
 name = "fpool"
 version = "0.1.0"
+license = "MIT"
 authors = ["Darren Tsung <darren@onesignal.com>"]
 description = "Non-leased object-pooling."
 homepage = "https://github.com/DarrenTsung/fpool"
