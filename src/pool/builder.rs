@@ -1,45 +1,44 @@
-use super::{Result, Pool, BoxedConstructor, ConstructionResult};
+use super::{Pool, BoxedConstructor};
 
-use std::marker::PhantomData;
+use std::result::Result;
 
-pub trait Build<TPool> {
-    fn build(self) -> Result<TPool>;
+pub trait Build<TPool>
+where
+    TPool: Pool,
+{
+    fn build(self) -> Result<TPool, TPool::Error>;
 }
 
-pub struct Builder<T, TPool>
+pub struct Builder<TPool>
 where
-    TPool: Pool<T>,
-    Builder<T, TPool>: Build<TPool>
+    TPool: Pool,
+    Builder<TPool>: Build<TPool>,
 {
     pub(crate) pool_size: usize,
-    pub(crate) constructor: BoxedConstructor<T>,
-
-    _pool: PhantomData<TPool>,
+    pub(crate) constructor: BoxedConstructor<TPool::Item, TPool::Error>,
 }
 
-impl<T, TPool> Builder<T, TPool>
+impl<TPool> Builder<TPool>
 where
-    TPool: Pool<T>,
-    Builder<T, TPool>: Build<TPool>
+    TPool: Pool,
+    Builder<TPool>: Build<TPool>
 {
     pub fn new<F> (
         pool_size: usize,
         constructor: F,
-    ) -> Builder<T, TPool>
+    ) -> Builder<TPool>
     where
-        F: 'static + Fn() -> ConstructionResult<T>
+        F: 'static + Fn() -> Result<TPool::Item, TPool::Error>
     {
         let constructor = Box::new(constructor);
 
         Builder {
             pool_size,
             constructor,
-
-            _pool: PhantomData,
         }
     }
 
-    pub fn build(self) -> Result<TPool> {
+    pub fn build(self) -> Result<TPool, TPool::Error> {
         Build::<TPool>::build(self)
     }
 }

@@ -1,26 +1,27 @@
 #[macro_use] mod macros;
 mod builder;
-mod error;
 mod round_robin_pool;
 
 pub use self::round_robin_pool::RoundRobinPool;
-pub use self::error::{
-    Error, Result,
-    ConstructionError, ConstructionResult,
-};
 
-pub type BoxedConstructor<T> = Box<Fn() -> ConstructionResult<T>>;
+pub type BoxedConstructor<T, TError> = Box<Fn() -> Result<T, TError>>;
 
-pub trait Pool<T> {
+pub enum ActResult<TError> {
+    /// Return Valid if the item does not need to be recreated
+    Valid,
+    ValidWithError(TError),
+
+    /// Return Invalid if the item needs to be recreated
+    Invalid,
+    InvalidWithError(TError),
+}
+
+pub trait Pool {
+    type Item;
+    type Error;
+
     /// Acts on the next item of the pool
-    /// Return false if the item is invalid and needs to be recreated
-    fn act<F>(&mut self, action: F) -> Result<()>
+    fn act<F>(&mut self, action: F) -> Result<(), Self::Error>
     where
-        F: Fn(&T) -> bool;
-
-    /// Acts on the next item of the pool, mutably
-    /// Return false if the item is invalid and needs to be recreated
-    fn act_mut<F>(&mut self, action: F) -> Result<()>
-    where
-        F: Fn(&mut T) -> bool;
+        F: FnOnce(&mut Self::Item) -> ActResult<Self::Error>;
 }

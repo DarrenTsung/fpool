@@ -24,16 +24,16 @@
 //! A trivial use-case for a round-robin pool:
 //!
 //! ```rust
-//! use fpool::RoundRobinPool;
+//! use fpool::{ActResult, RoundRobinPool};
 //!
-//! let mut pool = RoundRobinPool::builder(5, || {
+//! let mut pool = RoundRobinPool::builder(5, || -> Result<_, ()> {
 //!     Ok(Vec::new())
 //! }).build().expect("No constructor failure case");
 //!
 //! for index in 0..10 {
-//!     pool.act_mut(|list| {
+//!     pool.act(|list| {
 //!         list.push(index);
-//!         true // action succeeded and item is still valid
+//!         ActResult::Valid
 //!     }).expect("No constructor failure case");
 //! }
 //!
@@ -41,15 +41,13 @@
 //! for _ in 0..5 {
 //!     pool.act(|list| {
 //!         assert_eq!(list.len(), 2);
-//!         true // action succeeded and item is still valid
+//!         ActResult::Valid
 //!     }).expect("No constructor failure case");
 //! }
 //! ```
 //!
 //! But a more useful and realistic example is a thread-pool, see
 //! ./examples/thread_pool.rs.
-#[macro_use] extern crate failure;
-
 mod pool;
 
 pub use pool::*;

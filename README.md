@@ -11,7 +11,7 @@ Add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-fpool = "0.1"
+fpool = "0.2"
 ```
 
 Next, add this to your crate:
@@ -32,7 +32,7 @@ let mut pool = RoundRobinPool::builder(5, || {
 }).build().expect("No constructor failure case");
 
 for index in 0..10 {
-   pool.act_mut(|list| {
+   pool.act(|list| {
        list.push(index);
        true // action succeeded and item is still valid
    }).expect("No constructor failure case");
