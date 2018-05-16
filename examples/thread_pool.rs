@@ -1,6 +1,6 @@
 extern crate fpool;
 
-use fpool::{ActResult, RoundRobinPool};
+use fpool::RoundRobinPool;
 
 use std::io;
 use std::sync::mpsc;
@@ -42,22 +42,25 @@ fn main() {
 
     let messages = vec!["Good day.", "How do you do.", "Hola.", "Top of the morning to ya."];
     for message in messages {
-        pool
-            .act(|&mut (ref mut tx, ref mut join_handle)| {
-                match tx.send(message) {
-                    Ok(()) => ActResult::Valid,
-                    Err(_err) => {
-                        // failed, discard the message
-                        // and join with the thread, as it will be restarted
-                        if let Some(handle) = join_handle.take() {
-                            let _ = handle.join();
-                        }
-                        ActResult::Invalid
-                    },
+        // We can handle thread spawn failures here if they occur
+        let handle = pool.get().expect("Thread spawns");
+        let should_invalidate = {
+            let (ref mut tx, ref mut join_handle) = handle.as_item();
+            if let Err(_err) = tx.send(message) {
+                // failed, discard the message
+                // and join with the thread, as it will be restarted
+                if let Some(handle) = join_handle.take() {
+                    let _ = handle.join();
                 }
-            })
-            // We can handle thread spawn failures here if they occur
-            .expect("Thread spawns")
+                true
+            } else {
+                false
+            }
+        };
+
+        if should_invalidate {
+            handle.invalidate();
+        }
     }
 
     // Let the threads have time to receive the messages

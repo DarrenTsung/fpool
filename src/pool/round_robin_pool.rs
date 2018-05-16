@@ -1,76 +1,49 @@
-use super::{ActResult, BoxedConstructor, Pool};
+use super::{ItemHandle, BoxedConstructor, Pool};
 use super::builder::{Builder, Build};
 
-pub struct RoundRobinPool<T, TError> {
-    items: Vec<T>,
-    constructor: BoxedConstructor<T, TError>,
+/// A [`Pool`] that uses round-robin logic to retrieve items
+/// in the pool. Can be converted into the items with the `into_items()` function.
+pub struct RoundRobinPool<T, TCError> {
+    items: Vec<ItemHandle<T>>,
+    constructor: BoxedConstructor<T, TCError>,
     index: usize,
 }
 
-impl<T, TError> RoundRobinPool<T, TError> {
+impl<T, TCError> RoundRobinPool<T, TCError> {
     pub_builder_fn!(RoundRobinPool);
     pub_pool_fns!();
 
-    pub fn into_items(self) -> Vec<T> {
-        self.items
-    }
-
-    fn get_next(&mut self) -> &mut T {
-        let old_index = self.index;
-        self.index = (self.index + 1) % self.items.len();
-        self.items.get_mut(old_index).expect("exists")
-    }
-
-    fn reconstruct_last_item(&mut self) -> Result<(), TError> {
-        let previous_index = {
-            if self.index == 0 {
-                self.items.len() - 1
-            } else {
-                self.index - 1
-            }
-        };
-
-        self.items[previous_index] = (self.constructor)()?;
-        Ok(())
+    pub fn into_items(self) -> impl Iterator<Item=T> {
+        self.items.into_iter().map(|h| h.into_item())
     }
 }
 
-impl<T, TError> Pool for RoundRobinPool<T, TError> {
+impl<T, TCError> Pool for RoundRobinPool<T, TCError> {
     type Item = T;
-    type Error = TError;
+    type ConstructionError = TCError;
 
-    fn act<F>(&mut self, action: F)
-    -> Result<(), Self::Error>
-    where
-        F: FnOnce(&mut Self::Item) -> ActResult<TError>
+    fn get(&mut self) -> Result<&mut ItemHandle<T>, TCError>
     {
-        let mut res = Ok(());
-
-        match action(self.get_next()) {
-            ActResult::Valid => (),
-            ActResult::ValidWithError(err) => {
-                res = Err(err);
-            },
-            ActResult::Invalid => {
-                self.reconstruct_last_item()?;
-            }
-            ActResult::InvalidWithError(err) => {
-                res = Err(err);
-                self.reconstruct_last_item()?;
-            },
+        let invalid = self.items[self.index].invalid();
+        if invalid {
+            self.items[self.index] = ItemHandle::new((self.constructor)()?);
         }
 
-        res
+        let old_index = self.index;
+        self.index = (self.index + 1) % self.items.len();
+        Ok(&mut self.items[old_index])
     }
 }
 
-impl<T, TError> Build<RoundRobinPool<T, TError>> for Builder<RoundRobinPool<T, TError>> {
-    fn build(self) -> Result<RoundRobinPool<T, TError>, TError> {
+impl<T, TCError>
+    Build<RoundRobinPool<T, TCError>> for Builder<RoundRobinPool<T, TCError>>
+{
+    fn build(self) -> Result<RoundRobinPool<T, TCError>, TCError> {
         let Builder { pool_size, constructor, .. } = self;
 
         let mut items = Vec::with_capacity(pool_size);
         for _ in 0..pool_size {
-            items.push(constructor()?);
+            items.push(ItemHandle::new(constructor()?));
         }
 
         Ok(RoundRobinPool {
@@ -101,17 +74,17 @@ mod tests {
             .build()
             .expect("constructors successful");
 
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 1); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 2); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 3); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 4); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 1); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 2); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 3); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 4); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
+        assert_eq!(*pool.get().unwrap().as_item(), 1);
+        assert_eq!(*pool.get().unwrap().as_item(), 2);
+        assert_eq!(*pool.get().unwrap().as_item(), 3);
+        assert_eq!(*pool.get().unwrap().as_item(), 4);
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
+        assert_eq!(*pool.get().unwrap().as_item(), 1);
+        assert_eq!(*pool.get().unwrap().as_item(), 2);
+        assert_eq!(*pool.get().unwrap().as_item(), 3);
+        assert_eq!(*pool.get().unwrap().as_item(), 4);
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
     }
 
     #[test]
@@ -122,29 +95,37 @@ mod tests {
             unsafe {
                 let old_index = INDEX;
                 INDEX += 1;
-                let ret: Result<_, ()> = Ok(old_index);
-                ret
+                Ok(old_index)
             }
         };
 
-        let mut pool = RoundRobinPool::builder(5, constructor)
+        let mut pool = RoundRobinPool::<_, ()>::builder(5, constructor)
             .build()
             .expect("constructors successful");
 
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 1); ActResult::Valid }).unwrap();
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
+        assert_eq!(*pool.get().unwrap().as_item(), 1);
 
         // 2 will be removed and new constructor will replace with 5
-        pool.act(|item| { assert_eq!(*item, 2); ActResult::Invalid }).unwrap();
-        // 3 will be removed and new constructor will replace with 6
-        pool.act(|item| { assert_eq!(*item, 3); ActResult::Invalid }).unwrap();
+        {
+            let item_2 = pool.get().unwrap();
+            assert_eq!(*item_2.as_item(), 2);
+            item_2.invalidate();
+        }
 
-        pool.act(|item| { assert_eq!(*item, 4); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 1); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 5); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 6); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 4); ActResult::Valid }).unwrap();
-        pool.act(|item| { assert_eq!(*item, 0); ActResult::Valid }).unwrap();
+        // 3 will be removed and new constructor will replace with 6
+        {
+            let item_3 = pool.get().unwrap();
+            assert_eq!(*item_3.as_item(), 3);
+            item_3.invalidate();
+        }
+
+        assert_eq!(*pool.get().unwrap().as_item(), 4);
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
+        assert_eq!(*pool.get().unwrap().as_item(), 1);
+        assert_eq!(*pool.get().unwrap().as_item(), 5);
+        assert_eq!(*pool.get().unwrap().as_item(), 6);
+        assert_eq!(*pool.get().unwrap().as_item(), 4);
+        assert_eq!(*pool.get().unwrap().as_item(), 0);
     }
 }

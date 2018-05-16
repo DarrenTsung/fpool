@@ -6,7 +6,7 @@ pub trait Build<TPool>
 where
     TPool: Pool,
 {
-    fn build(self) -> Result<TPool, TPool::Error>;
+    fn build(self) -> Result<TPool, TPool::ConstructionError>;
 }
 
 pub struct Builder<TPool>
@@ -15,7 +15,7 @@ where
     Builder<TPool>: Build<TPool>,
 {
     pub(crate) pool_size: usize,
-    pub(crate) constructor: BoxedConstructor<TPool::Item, TPool::Error>,
+    pub(crate) constructor: BoxedConstructor<TPool::Item, TPool::ConstructionError>,
 }
 
 impl<TPool> Builder<TPool>
@@ -28,7 +28,7 @@ where
         constructor: F,
     ) -> Builder<TPool>
     where
-        F: 'static + Fn() -> Result<TPool::Item, TPool::Error>
+        F: 'static + Fn() -> Result<TPool::Item, TPool::ConstructionError>
     {
         let constructor = Box::new(constructor);
 
@@ -38,7 +38,7 @@ where
         }
     }
 
-    pub fn build(self) -> Result<TPool, TPool::Error> {
+    pub fn build(self) -> Result<TPool, TPool::ConstructionError> {
         Build::<TPool>::build(self)
     }
 }
