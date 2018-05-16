@@ -13,6 +13,10 @@ impl<T, TCError> RoundRobinPool<T, TCError> {
     pub_builder_fn!(RoundRobinPool);
     pub_pool_fns!();
 
+    pub fn size(&self) -> usize {
+        self.items.len()
+    }
+
     pub fn into_items(self) -> impl Iterator<Item=T> {
         self.items.into_iter().map(|h| h.into_item())
     }
