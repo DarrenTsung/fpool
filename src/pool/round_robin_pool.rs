@@ -20,6 +20,14 @@ impl<T, TCError> RoundRobinPool<T, TCError> {
     pub fn into_items(self) -> impl Iterator<Item=T> {
         self.items.into_iter().map(|h| h.into_item())
     }
+
+    pub fn items_iter(&self) -> impl Iterator<Item=&T> {
+        self.items.iter().map(|h| h.as_item())
+    }
+
+    pub fn items_iter_mut(&mut self) -> impl Iterator<Item=&mut T> {
+        self.items.iter_mut().map(|h| h.as_item_mut())
+    }
 }
 
 impl<T, TCError> Pool for RoundRobinPool<T, TCError> {

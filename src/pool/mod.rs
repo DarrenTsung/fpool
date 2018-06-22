@@ -29,8 +29,12 @@ pub struct ItemHandle<T> {
 }
 
 impl<T> ItemHandle<T> {
-    pub fn as_item(&mut self) -> &mut T {
+    pub fn as_item_mut(&mut self) -> &mut T {
         &mut self.item
+    }
+
+    pub fn as_item(&self) -> &T {
+        &self.item
     }
 
     /// Invalidate this item, it will be re-constructed on next retrieval.

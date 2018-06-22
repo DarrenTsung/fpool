@@ -45,7 +45,7 @@ fn main() {
         // We can handle thread spawn failures here if they occur
         let handle = pool.get().expect("Thread spawns");
         let should_invalidate = {
-            let (ref mut tx, ref mut join_handle) = handle.as_item();
+            let (ref mut tx, ref mut join_handle) = handle.as_item_mut();
             if let Err(_err) = tx.send(message) {
                 // failed, discard the message
                 // and join with the thread, as it will be restarted
