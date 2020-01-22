@@ -7,7 +7,7 @@ mod round_robin_pool;
 
 pub use self::round_robin_pool::RoundRobinPool;
 
-type BoxedConstructor<T, TError> = Box<dyn Fn() -> Result<T, TError>>;
+type BoxedConstructor<T, TError> = Box<dyn Send + Fn() -> Result<T, TError>>;
 
 /// An object which returns re-used items. Pools hold on to a constructor
 /// so they can recreate elements that are invalid (marked by user).

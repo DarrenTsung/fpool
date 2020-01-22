@@ -25,7 +25,7 @@ where
 {
     pub fn new<F>(pool_size: usize, constructor: F) -> Builder<TPool>
     where
-        F: 'static + Fn() -> Result<TPool::Item, TPool::ConstructionError>,
+        F: 'static + Send + Fn() -> Result<TPool::Item, TPool::ConstructionError>,
     {
         let constructor = Box::new(constructor);
 

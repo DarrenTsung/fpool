@@ -1,7 +1,7 @@
 macro_rules! pub_builder_fn {
     ($pool_type:ident) => {
         /// Get the builder for the pool.
-        pub fn builder<F: 'static + Fn() -> Result<T, TCError>>(
+        pub fn builder<F: 'static + Send + Fn() -> Result<T, TCError>>(
             pool_size: usize,
             constructor: F,
         ) -> Builder<$pool_type<T, TCError>> {
