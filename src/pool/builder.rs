@@ -1,4 +1,4 @@
-use super::{Pool, BoxedConstructor};
+use super::{BoxedConstructor, Pool};
 
 use std::result::Result;
 
@@ -21,14 +21,11 @@ where
 impl<TPool> Builder<TPool>
 where
     TPool: Pool,
-    Builder<TPool>: Build<TPool>
+    Builder<TPool>: Build<TPool>,
 {
-    pub fn new<F> (
-        pool_size: usize,
-        constructor: F,
-    ) -> Builder<TPool>
+    pub fn new<F>(pool_size: usize, constructor: F) -> Builder<TPool>
     where
-        F: 'static + Fn() -> Result<TPool::Item, TPool::ConstructionError>
+        F: 'static + Fn() -> Result<TPool::Item, TPool::ConstructionError>,
     {
         let constructor = Box::new(constructor);
 

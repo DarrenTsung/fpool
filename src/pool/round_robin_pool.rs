@@ -1,5 +1,5 @@
-use super::{ItemHandle, BoxedConstructor, Pool};
-use super::builder::{Builder, Build};
+use super::builder::{Build, Builder};
+use super::{BoxedConstructor, ItemHandle, Pool};
 
 /// A [`Pool`] that uses round-robin logic to retrieve items
 /// in the pool. Can be converted into the items with the `into_items()` function.
@@ -17,15 +17,15 @@ impl<T, TCError> RoundRobinPool<T, TCError> {
         self.items.len()
     }
 
-    pub fn into_items(self) -> impl Iterator<Item=T> {
+    pub fn into_items(self) -> impl Iterator<Item = T> {
         self.items.into_iter().map(|h| h.into_item())
     }
 
-    pub fn items_iter(&self) -> impl Iterator<Item=&T> {
+    pub fn items_iter(&self) -> impl Iterator<Item = &T> {
         self.items.iter().map(|h| h.as_item())
     }
 
-    pub fn items_iter_mut(&mut self) -> impl Iterator<Item=&mut T> {
+    pub fn items_iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.items.iter_mut().map(|h| h.as_item_mut())
     }
 }
@@ -34,8 +34,7 @@ impl<T, TCError> Pool for RoundRobinPool<T, TCError> {
     type Item = T;
     type ConstructionError = TCError;
 
-    fn get(&mut self) -> Result<&mut ItemHandle<T>, TCError>
-    {
+    fn get(&mut self) -> Result<&mut ItemHandle<T>, TCError> {
         let invalid = self.items[self.index].invalid();
         if invalid {
             self.items[self.index] = ItemHandle::new((self.constructor)()?);
@@ -47,11 +46,13 @@ impl<T, TCError> Pool for RoundRobinPool<T, TCError> {
     }
 }
 
-impl<T, TCError>
-    Build<RoundRobinPool<T, TCError>> for Builder<RoundRobinPool<T, TCError>>
-{
+impl<T, TCError> Build<RoundRobinPool<T, TCError>> for Builder<RoundRobinPool<T, TCError>> {
     fn build(self) -> Result<RoundRobinPool<T, TCError>, TCError> {
-        let Builder { pool_size, constructor, .. } = self;
+        let Builder {
+            pool_size,
+            constructor,
+            ..
+        } = self;
 
         let mut items = Vec::with_capacity(pool_size);
         for _ in 0..pool_size {
@@ -72,14 +73,12 @@ mod tests {
 
     #[test]
     fn works_in_round_robin_fashion() {
-        static mut INDEX : usize = 0;
+        static mut INDEX: usize = 0;
 
-        let constructor = || {
-            unsafe {
-                let old_index = INDEX;
-                INDEX += 1;
-                Ok(old_index)
-            }
+        let constructor = || unsafe {
+            let old_index = INDEX;
+            INDEX += 1;
+            Ok(old_index)
         };
 
         let mut pool = RoundRobinPool::<_, ()>::builder(5, constructor)
@@ -101,14 +100,12 @@ mod tests {
 
     #[test]
     fn refills_items_as_expected() {
-        static mut INDEX : usize = 0;
+        static mut INDEX: usize = 0;
 
-        let constructor = || {
-            unsafe {
-                let old_index = INDEX;
-                INDEX += 1;
-                Ok(old_index)
-            }
+        let constructor = || unsafe {
+            let old_index = INDEX;
+            INDEX += 1;
+            Ok(old_index)
         };
 
         let mut pool = RoundRobinPool::<_, ()>::builder(5, constructor)
