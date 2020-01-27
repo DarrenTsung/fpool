@@ -9,7 +9,7 @@ use std::time::Duration;
 
 fn main() {
     // Use static variable to label the threads as they're spawned
-    static mut THREAD_INDEX : usize = 0;
+    static mut THREAD_INDEX: usize = 0;
 
     let thread_spawner = || -> io::Result<_> {
         let index = unsafe {
@@ -40,7 +40,12 @@ fn main() {
         // We can handle initial thread spawn failures here
         .expect("Thread spawns");
 
-    let messages = vec!["Good day.", "How do you do.", "Hola.", "Top of the morning to ya."];
+    let messages = vec![
+        "Good day.",
+        "How do you do.",
+        "Hola.",
+        "Top of the morning to ya.",
+    ];
     for message in messages {
         // We can handle thread spawn failures here if they occur
         let handle = pool.get().expect("Thread spawns");
